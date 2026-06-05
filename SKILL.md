@@ -1,70 +1,88 @@
 ---
 name: mt-farmer
-description: "合规优先的私有站点浏览助手：默认 dry-run 审阅，支持分段浏览；仅在站点规则允许时可显式启用 Transmission 导入。"
+description: "私有站点种子自动收割——逐页遍历、下载种子、添加到 Transmission 做种"
 ---
 
-# 私有站点浏览助手
+# MT Farmer – 私有站点种子收割
 
-这个 skill 用于本地、合规优先地审阅私有站点分页列表。默认是 dry-run，不会下载。
+逐页浏览站点种子列表（按体积升序），自动下载 .torrent 并导入 Transmission 做种。
 
-## 操作规则
+**核心特性：** 🔄 断点续传（segment/page/row） · 📐 体积分页法（突破 100 页窗口） · 🧹 自动清理 · 📅 每日/每小时限速 · 🔴 SIGINT 安全退出
 
-- 不要硬编码站点域名、账号标识、passkey、cookie、内网 IP 或真实浏览 URL。
-- 从本地环境变量传入 `BROWSE_URL` 或 `BROWSE_URL_LIST`。
-- 除非用户明确确认目标站点允许对应自动化，否则保持 `DRY_RUN=true`。
-- 主动下载必须同时设置：
-  - `DRY_RUN=false`
-  - `DOWNLOADS_ENABLED=true`
-  - `ACK_SITE_RULES=true`
-- 如果页面出现验证码、警告、限流、异常跳转或账号风险提示，立即停止。
+## 前置条件
 
-## 本地输入
+- OpenClaw browser plugin + CDP bridge
+- Node.js v18+
+- Transmission RPC 可访问
+- 目标站点账号已登录（cookie 在 OpenClaw browser profile）
 
-| 变量 | 说明 |
-|---|---|
-| `BROWSE_URL` 或 `BROWSE_URL_LIST` | 本地浏览 URL，建议使用体积升序排序。 |
-| `TR_URL`, `TR_USER`, `TR_PASS` | Transmission RPC 凭据，仅主动下载时需要。 |
-| `DAILY_LIMIT`, `HOURLY_LIMIT` | 保守的每日/每小时上限，应低于站点规则上限。 |
-| `SEGMENT_MAX_TORRENT_BYTES` | 当前候选项超过该体积时结束当前分段。 |
-| `SEGMENT_MIN_TORRENT_BYTES` | 可选的最小体积阈值，用于跳过已覆盖区间。 |
+## 配置
 
-脚本仍兼容旧变量 `MT_BROWSE` 和 `MT_BROWSE_LIST`，但公开示例不要使用这些名称。
+通过环境变量，无配置文件：
 
-## 安全试跑
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `BROWSE_URL` | — | 单个浏览页 URL（建议含体积升序排序） |
+| `BROWSE_URL_LIST` | — | 多个 URL，换行或逗号分隔 |
+| `DRY_RUN` | `true` | 只扫描不下载 |
+| `DOWNLOADS_ENABLED` | `false` | 启用下载 |
+| `ACK_SITE_RULES` | `false` | 确认遵守站点规则 |
+| `TR_URL` | — | Transmission RPC 地址（下载时必填） |
+| `TR_USER` | — | Transmission 用户名 |
+| `TR_PASS` | — | Transmission 密码 |
+| `SEGMENT_MAX_TORRENT_BYTES` | `367001600` (350MiB) | 超过则结束当前分段 |
+| `SEGMENT_MIN_TORRENT_BYTES` | `0` (关闭) | 跳过低于此值的种子 |
+| `DAILY_LIMIT` | `950` | 每日下载上限 |
+| `HOURLY_LIMIT` | `90` | 每小时下载上限 |
+| `BETWEEN_TORRENT` | `45000` | 种子间等待 (ms) |
+| `MAX_PAGES` | `100` | 每个 URL 最大页数 |
+| `CHECKPOINT_FILE` | `~/.mt_farmer_checkpoint.json` | 断点文件 |
+| `LOG_FILE` | `~/.mt_farmer.log` | 日志文件 |
+| `DL_DIR` | `/tmp/mt_downloads` | .torrent 临时目录 |
+
+兼容旧变量名 `MT_BROWSE` / `MT_BROWSE_LIST`。
+
+## 用法
+
+### Dry-run 扫描（默认）
 
 ```bash
-BROWSE_URL_LIST="$(cat private-browse-list.txt)" \
-DRY_RUN=true \
+BROWSE_URL_LIST="$(cat browse-urls.txt)" \
 node scripts/mt_farmer.js
 ```
 
-## 主动运行
-
-仅在检查站点规则和账号权限后使用：
+### 正式下载
 
 ```bash
-BROWSE_URL_LIST="$(cat private-browse-list.txt)" \
 DRY_RUN=false \
 DOWNLOADS_ENABLED=true \
 ACK_SITE_RULES=true \
-TR_URL='http://127.0.0.1:9091/transmission/rpc' \
-TR_USER='transmission-user' \
-TR_PASS='transmission-password' \
+BROWSE_URL_LIST="$(cat browse-urls.txt)" \
+TR_URL='http://x.x.x.x:50040/transmission/rpc' \
+TR_USER='admin' TR_PASS='secret' \
+SEGMENT_MIN_TORRENT_BYTES=220200960 \
+SEGMENT_MAX_TORRENT_BYTES=367001600 \
 node scripts/mt_farmer.js
 ```
 
-## 分段
+## 100 页窗口突破
 
-如果浏览结果存在固定页数窗口，请使用目标站点页面已有筛选条件拆分结果。优先使用分类、日期、编码、分辨率、促销状态等筛选。不要依赖请求可见窗口之外的页码。
-
-本地生成半年度日期分段：
+部分站点搜索结果限制前 100 页。用站点筛选条件（分类、日期、促销状态等）拆成多个 URL，通过 `BROWSE_URL_LIST` 依次跑：
 
 ```bash
-BASE_BROWSE_URL='https://example.invalid/browse?sort=size%3Aascend&...your-local-filter' \
-START_YEAR=2015 END_YEAR=2026 TZ_OFFSET=10 \
-npm run build:half-year-urls > private-browse-list.txt
+BROWSE_URL_LIST='https://example.invalid/browse?sort=size:ascend&...filter-a
+https://example.invalid/browse?sort=size:ascend&...filter-b' \
+DRY_RUN=false DOWNLOADS_ENABLED=true ACK_SITE_RULES=true \
+TR_URL=... TR_USER=... TR_PASS=... \
+node scripts/mt_farmer.js
 ```
 
-## 隐私
+checkpoint 记录 `segment/page/row`，中断后从当前切片继续。
 
-分享任何输出前，移除账号名、profile 链接、分享率、上传/下载统计、奖励数值、邀请码数量、cookie、passkey、真实站点域名、真实浏览 URL、Transmission 地址和内网 IP。
+### URL 生成辅助
+
+```bash
+BASE_BROWSE_URL='https://example.invalid/browse?sort=size:ascend&...your-filter' \
+START_YEAR=2015 END_YEAR=2026 TZ_OFFSET=10 \
+npm run build:half-year-urls > browse-urls.txt
+```
