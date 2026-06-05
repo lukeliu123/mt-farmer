@@ -1,0 +1,8 @@
+node_modules/
+*.torrent
+/tmp/
+.DS_Store
+private-browse-list.txt
+*.log
+*.checkpoint.json
+.mt_farmer*

@@ -1,0 +1,20 @@
+{
+  "name": "mt-farmer",
+  "version": "2.3.0",
+  "description": "Policy-first private tracker browser assistant",
+  "license": "MIT",
+  "author": "lukeliu123",
+  "repository": "github:lukeliu123/mt-farmer",
+  "scripts": {
+    "start": "node scripts/mt_farmer_standalone.js",
+    "start:openclaw": "node scripts/mt_farmer.js",
+    "build:half-year-urls": "node scripts/build_half_year_urls.js"
+  },
+  "dependencies": {
+    "puppeteer": "^24.0.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
