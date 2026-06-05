@@ -20,7 +20,7 @@ const CONFIG = {
   maxBytes: parseInt(process.env.MAX_BYTES || '1099511627776', 10),
   segmentMaxTorrentBytes: parseInt(process.env.SEGMENT_MAX_TORRENT_BYTES || '367001600', 10),
   segmentMinTorrentBytes: parseInt(process.env.SEGMENT_MIN_TORRENT_BYTES || '0', 10),
-  dailyLimit: parseInt(process.env.DAILY_LIMIT || '950', 10),
+  dailyLimit: parseInt(process.env.DAILY_LIMIT || '1200', 10),
   hourlyLimit: parseInt(process.env.HOURLY_LIMIT || '90', 10),
   // Timezone offset used for daily quota windows.
   tzOffset: parseInt(process.env.TZ_OFFSET || '8', 10),

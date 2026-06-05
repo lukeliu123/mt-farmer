@@ -125,7 +125,7 @@ async function main(){
   // Daily/hourly download counters. Keep conservative defaults.
   const today=tzDate(TZ_OFFSET);
   let dlToday=0,dailyDate=today;
-  const DAILY_LIMIT=parseInt(process.env.DAILY_LIMIT||'950',10);
+  const DAILY_LIMIT=parseInt(process.env.DAILY_LIMIT||'1200',10);
   const HOURLY_LIMIT=parseInt(process.env.HOURLY_LIMIT||'90',10);
   let hourlyCount=0,hourlyWindow=Date.now();
 

@@ -32,7 +32,7 @@ description: "私有站点种子自动收割——逐页遍历、下载种子、
 | `TR_PASS` | — | Transmission 密码 |
 | `SEGMENT_MAX_TORRENT_BYTES` | `367001600` (350MiB) | 超过则结束当前分段 |
 | `SEGMENT_MIN_TORRENT_BYTES` | `0` (关闭) | 跳过低于此值的种子 |
-| `DAILY_LIMIT` | `950` | 每日下载上限 |
+| `DAILY_LIMIT` | `1200` | 每日下载上限 |
 | `HOURLY_LIMIT` | `90` | 每小时下载上限 |
 | `BETWEEN_TORRENT` | `45000` | 种子间等待 (ms) |
 | `MAX_PAGES` | `100` | 每个 URL 最大页数 |
